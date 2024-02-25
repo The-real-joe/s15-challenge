@@ -1,7 +1,29 @@
 const router = require('express').Router();
+const bcrypt = require('bcryptjs')
+const User = require('./auth-model')
+const jwt = require('jsonwebtoken')
 
-router.post('/register', (req, res) => {
-  res.end('implement register, please!');
+router.post('/register', async (req, res, next) => {
+  try{
+    const {username,password} = req.body
+    if(!username || !password){
+      return res.status(400).json({message: "username and password required"})
+    }
+    try{
+      const existingUser = await User.findBy(username)
+      if(existingUser){
+        res.status(409).json({message: "username taken"})
+      }
+    }catch(error){
+      next(error)
+    }
+    const hash = bcrypt.hashSync(password, 8)
+    const newUser = await User.add({username, password: hash})
+     const createdUser = await User.  addUser(newUser)
+    res.status(201).json({id: createdUser.id, username: createdUser.username, password: createdUser.password})
+  }catch(error){
+    next(error)
+  }
   /*
     IMPLEMENT
     You are welcome to build additional middlewares to help with the endpoint's functionality.
@@ -29,8 +51,26 @@ router.post('/register', (req, res) => {
   */
 });
 
-router.post('/login', (req, res) => {
+router.post('/login', async (req, res, next) => {
   res.end('implement login, please!');
+  try{
+    const {username, password} = req.body
+    if(!username || !password){
+      return res.status(400).json({message: "username and password required"})
+    }
+    const user = await User.findBy(username)
+    if(!user){
+      return res.status(401).json({message: "invalid credentials"})
+    }
+    const match = bcrypt.compareSync(password, user.password)
+    if(!match){
+      return res.status(401).json({message: "invalid credentials"})
+    }
+    const token = jwt.sign({username}, process.env.JWT_SECRET)
+    res.status(200).json({message: `welcome, ${username}`, token})
+  }catch(error){
+    next(error)
+  }
   /*
     IMPLEMENT
     You are welcome to build additional middlewares to help with the endpoint's functionality.
