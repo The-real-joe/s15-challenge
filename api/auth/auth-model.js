@@ -1,4 +1,4 @@
-const db = require('../../data/dbiconfig');
+const db = require('../../data/db-config');
 
 module.exports = {
     addUser, findBy
