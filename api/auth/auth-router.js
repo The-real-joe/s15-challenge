@@ -3,7 +3,7 @@ const bcrypt = require('bcryptjs')
 const User = require('./auth-model')
 const jwt = require('jsonwebtoken')
 
-router.post('/register', async (req, res, next) => {
+router.post('/register', async (req, res,next) => {
   try{
     const {username,password} = req.body
     if(!username || !password){
@@ -17,12 +17,21 @@ router.post('/register', async (req, res, next) => {
     }catch(error){
       next(error)
     }
-    const hash = bcrypt.hashSync(password, 8)
-    const newUser = await User.add({username, password: hash})
-     const createdUser = await User.  addUser(newUser)
-    res.status(201).json({id: createdUser.id, username: createdUser.username, password: createdUser.password})
-  }catch(error){
-    next(error)
+    const hash = bcrypt.hashSync(password,8)
+    const newUser = {username,password:hash}
+    console.log(newUser,'newuser')
+    
+    const createdUser = await User.addUser(newUser)
+    console.log(createdUser,'created user')
+
+
+    res.status(201).json({
+      id:createdUser.id,
+      username:createdUser.username,
+      password: createdUser.password
+    })
+  }catch(err){
+    next(err)
   }
   /*
     IMPLEMENT
@@ -51,25 +60,28 @@ router.post('/register', async (req, res, next) => {
   */
 });
 
-router.post('/login', async (req, res, next) => {
-  res.end('implement login, please!');
+router.post('/login', async (req, res,next) => {
   try{
-    const {username, password} = req.body
+    const {username,password} = req.body
     if(!username || !password){
-      return res.status(400).json({message: "username and password required"})
+      return res.status(400).json({message:"username and password required"})
     }
     const user = await User.findBy(username)
-    if(!user){
-      return res.status(401).json({message: "invalid credentials"})
+  
+
+
+     if(user && bcrypt.compareSync(password,user.password)){
+      const token = generateToken(user)
+      req.session.user = user
+      res.json({
+        message: `welcome, ${username}`,
+        token: token
+      })
+    }else {
+      return res.status(401).json({message:'invalid credentials'})
     }
-    const match = bcrypt.compareSync(password, user.password)
-    if(!match){
-      return res.status(401).json({message: "invalid credentials"})
-    }
-    const token = jwt.sign({username}, process.env.JWT_SECRET)
-    res.status(200).json({message: `welcome, ${username}`, token})
-  }catch(error){
-    next(error)
+  }catch (err){
+    next(err)
   }
   /*
     IMPLEMENT
@@ -95,5 +107,17 @@ router.post('/login', async (req, res, next) => {
       the response body should include a string exactly as follows: "invalid credentials".
   */
 });
+
+function generateToken(user){
+  const payload = {
+    userId: user.id,
+    username: user.username
+  }
+  const secret = 'secret';
+  const options = {
+    expiresIn: '1d'
+  }
+  return jwt.sign(payload,secret,options)
+}
 
 module.exports = router;
