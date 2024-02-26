@@ -1,10 +1,10 @@
 const db = require('../../data/dbiconfig');
 
-,odule.exports = {
+module.exports = {
     addUser, findBy
 }
 
-async function assUser(user){
+async function addUser(user){
     const [ id] = await db('users').insert(user)
     const newUser = await db("users").where({id}).first();
     return newUser;
